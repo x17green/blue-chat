@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bluetooth Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .chat-container {
+            width: 90%;
+            max-width: 800px;
+            height: 90vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .chat-header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .status {
+            font-size: 14px;
+            opacity: 0.9;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+        
+        .connect-section {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .connect-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .connect-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            animation: fadeInUp 0.3s ease;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .message.sent {
+            text-align: right;
+        }
+        
+        .message.received {
+            text-align: left;
+        }
+        
+        .message-content {
+            display: inline-block;
+            max-width: 70%;
+            padding: 12px 18px;
+            border-radius: 20px;
+            word-wrap: break-word;
+            position: relative;
+        }
+        
+        .message.sent .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+        
+        .message.received .message-content {
+            background: white;
+            color: #333;
+            border: 1px solid #e0e0e0;
+            border-bottom-left-radius: 5px;
+        }
+        
+        .message-header {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .message.sent .message-header {
+            text-align: right;
+        }
+        
+        .message.received .message-header {
+            text-align: left;
+        }
+        
+        .sender {
+            font-weight: bold;
+        }
+        
+        .timestamp {
+            margin-left: 10px;
+        }
+        
+        .message-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .message-input {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+        
+        .message-input:focus {
+            border-color: #667eea;
+        }
+        
+        .send-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 80px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .send-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .bluetooth-icon {
+            display: inline-block;
+            margin-right: 10px;
+            font-size: 20px;
+        }
+        
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 10px;
+            margin: 10px 20px;
+            border-left: 4px solid #c62828;
+        }
+        
+        .info-message {
+            background: #e3f2fd;
+            color: #1565c0;
+            padding: 15px 20px;
+            text-align: center;
+            font-size: 14px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        /* Scrollbar styling */
+        .messages-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .messages-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        .messages-container::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 10px;
+        }
+        
+        .messages-container::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        @media (max-width: 768px) {
+            .chat-container {
+                width: 95%;
+                height: 95vh;
+                border-radius: 15px;
+            }
+            
+            .message-content {
+                max-width: 85%;
+            }
+            
+            .chat-header h1 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1><span class="bluetooth-icon">📱</span>Bluetooth Chat</h1>
+            <div class="status" id="status">Disconnected</div>
+        </div>
+        
+        <div class="info-message">
+            Click "Connect" to pair with a Bluetooth device. Make sure Bluetooth is enabled and the target device is discoverable.
+        </div>
+        
+        <div class="connect-section">
+            <button class="connect-button" id="connectButton">
+                <span class="bluetooth-icon">🔗</span>Connect to Device
+            </button>
+            <!-- Add inside .connect-section (below Connect to Device button) -->
+            <button class="connect-button" id="scanButton" style="margin-top: 15px;">
+                🔍 Scan for Devices
+            </button>
+        </div>
+        
+        <div class="messages-container" id="messages">
+            <!-- Messages will appear here -->
+        </div>
+        
+        <div class="message-input-container">
+            <input type="text" class="message-input" id="messageInput" 
+            placeholder="Type your message..." disabled>
+            <button class="send-button" id="sendButton" disabled>Send</button>
+        </div>
+    </div>
+    
+    <script type="module">
+        class WebBluetoothService {
+            constructor() {
+                this.device = null;
+                this.server = null;
+                this.characteristic = null;
+                this.messageCallbacks = [];
+                
+                // Using a generic service UUID - you may need to adjust this
+                // for your specific Bluetooth device
+                this.SERVICE_UUID = 0x1803; // Link Loss service
+                this.CHARACTERISTIC_UUID = 0x2A06; // Generic characteristic
+            }
+            
+            async connect() {
+                try {
+                    console.log('Requesting Bluetooth Device...');
+                    this.device = await navigator.bluetooth.requestDevice({
+                        acceptAllDevices: true,
+                        optionalServices: ['generic_access', 'generic_attribute']
+                    });
+                    
+                    console.log('Connecting to GATT Server...');
+                    this.server = await this.device.gatt.connect();
+                    
+                    console.log('Connected successfully!');
+                    return this.server;
+                } catch (error) {
+                    console.error('Bluetooth connection failed:', error);
+                    throw error;
+                }
+            }
+            
+            async disconnect() {
+                if (this.server) {
+                    this.server.disconnect();
+                    this.server = null;
+                }
+                this.device = null;
+            }
+            
+            async sendMessage(message) {
+                // For demo purposes, we'll just log the message
+                // In a real implementation, you'd write to a characteristic
+                console.log('Sending message:', message);
+                
+                // Simulate receiving an echo back after a delay
+                setTimeout(() => {
+                    this.simulateIncomingMessage(`Echo: ${message}`);
+                }, 1000);
+            }
+            
+            onMessage(callback) {
+                this.messageCallbacks.push(callback);
+            }
+            
+            simulateIncomingMessage(message) {
+                const bluetoothMessage = {
+                    id: Date.now().toString(),
+                    content: message,
+                    timestamp: Date.now(),
+                    sender: this.device?.name || 'Remote Device',
+                    type: 'text'
+                };
+                
+                this.messageCallbacks.forEach(callback => callback(bluetoothMessage));
+            }
+
+            async getAvailableDevices() {
+                if (!navigator.bluetooth) {
+                    alert("Web Bluetooth is not supported in this browser. Please use Chrome on desktop with HTTPS or localhost.");
+                    return [];
+                }
+                
+                const available = await navigator.bluetooth.getAvailability();
+                if (!available) {
+                    alert("Please enable Bluetooth on your device before scanning.");
+                    return [];
+                }
+                
+                try {
+                    const device = await navigator.bluetooth.requestDevice({
+                        acceptAllDevices: true,
+                        optionalServices: ['battery_service', 'generic_access', 'generic_attribute']
+                    });
+                    
+                    const customDevice = {
+                        id: device.id,
+                        name: device.name || 'Unnamed Device',
+                        connected: device.gatt?.connected ?? false,
+                        lastSeen: Date.now()
+                    };
+                    
+                    return [customDevice];
+                } catch (error) {
+                    console.error('Device discovery failed:', error);
+                    return [];
+                }
+            }
+            
+        }
+        
+        class BluetoothChatApp {
+            constructor() {
+                this.bluetoothService = new WebBluetoothService();
+                this.isConnected = false;
+                this.initializeUI();
+                this.setupEventListeners();
+                this.checkBluetoothSupport();
+            }
+            
+            initializeUI() {
+                this.messagesContainer = document.getElementById('messages');
+                this.messageInput = document.getElementById('messageInput');
+                this.sendButton = document.getElementById('sendButton');
+                this.connectButton = document.getElementById('connectButton');
+                this.statusElement = document.getElementById('status');
+                this.scanButton = document.getElementById('scanButton');
+                this.scanButton.addEventListener('click', this.handleScanDevices.bind(this));
+            }
+            
+            checkBluetoothSupport() {
+                if (!navigator.bluetooth) {
+                    this.addErrorMessage('Web Bluetooth is not supported in this browser. Please use Chrome, Edge, or Opera.');
+                    this.connectButton.disabled = true;
+                }
+            }
+            
+            setupEventListeners() {
+                this.connectButton.addEventListener('click', this.handleConnect.bind(this));
+                this.sendButton.addEventListener('click', this.handleSendMessage.bind(this));
+                this.messageInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && !this.sendButton.disabled) {
+                        this.handleSendMessage();
+                    }
+                });
+                
+                this.bluetoothService.onMessage(this.handleIncomingMessage.bind(this));
+            }
+            
+            async handleScanDevices() {
+                try {
+                    const devices = await this.bluetoothService.getAvailableDevices();
+                    if (devices.length > 0) {
+                        this.addInfoMessage(`Discovered device: ${devices[0].name || 'Unnamed Device'}`);
+                    } else {
+                        this.addInfoMessage('No devices found or scan cancelled.');
+                    }
+                } catch (error) {
+                    this.addErrorMessage(`Scan failed: ${error.message}`);
+                }
+            }
+            
+            async handleConnect() {
+                if (this.isConnected) {
+                    await this.handleDisconnect();
+                    return;
+                }
+                
+                try {
+                    this.updateStatus('Connecting...');
+                    this.connectButton.disabled = true;
+                    
+                    await this.bluetoothService.connect();
+                    
+                    this.isConnected = true;
+                    this.updateStatus('Connected');
+                    this.connectButton.textContent = '🔌 Disconnect';
+                    this.connectButton.disabled = false;
+                    this.sendButton.disabled = false;
+                    this.messageInput.disabled = false;
+                    this.messageInput.focus();
+                    
+                    this.addInfoMessage('Successfully connected to Bluetooth device!');
+                } catch (error) {
+                    this.updateStatus('Connection failed');
+                    this.connectButton.disabled = false;
+                    this.addErrorMessage(`Connection failed: ${error.message}`);
+                    console.error('Connection error:', error);
+                }
+            }
+            
+            async handleDisconnect() {
+                try {
+                    await this.bluetoothService.disconnect();
+                    this.isConnected = false;
+                    this.updateStatus('Disconnected');
+                    this.connectButton.textContent = '🔗 Connect to Device';
+                    this.sendButton.disabled = true;
+                    this.messageInput.disabled = true;
+                    this.addInfoMessage('Disconnected from Bluetooth device.');
+                } catch (error) {
+                    console.error('Disconnect error:', error);
+                }
+            }
+            
+            async handleSendMessage() {
+                const message = this.messageInput.value.trim();
+                if (!message) return;
+                
+                try {
+                    await this.bluetoothService.sendMessage(message);
+                    this.addMessageToUI({
+                        id: Date.now().toString(),
+                        content: message,
+                        timestamp: Date.now(),
+                        sender: 'You',
+                        type: 'text'
+                    });
+                    this.messageInput.value = '';
+                } catch (error) {
+                    console.error('Send message error:', error);
+                    this.addErrorMessage('Failed to send message');
+                }
+            }
+            
+            handleIncomingMessage(message) {
+                this.addMessageToUI(message);
+            }
+            
+            addMessageToUI(message) {
+                const messageElement = document.createElement('div');
+                messageElement.className = `message ${message.sender === 'You' ? 'sent' : 'received'}`;
+                messageElement.innerHTML = `
+                    <div class="message-header">
+                        <span class="sender">${message.sender}</span>
+                        <span class="timestamp">${new Date(message.timestamp).toLocaleTimeString()}</span>
+                    </div>
+                    <div class="message-content">${this.escapeHtml(message.content)}</div>
+                `;
+                
+                this.messagesContainer.appendChild(messageElement);
+                this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+            }
+            
+            addErrorMessage(message) {
+                const errorElement = document.createElement('div');
+                errorElement.className = 'error-message';
+                errorElement.textContent = message;
+                this.messagesContainer.appendChild(errorElement);
+                this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+            }
+            
+            addInfoMessage(message) {
+                const infoElement = document.createElement('div');
+                infoElement.className = 'message received';
+                infoElement.innerHTML = `
+                    <div class="message-header">
+                        <span class="sender">System</span>
+                        <span class="timestamp">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <div class="message-content" style="background: #e8f5e8; color: #2e7d32; border-color: #4caf50;">
+                        ${this.escapeHtml(message)}
+                    </div>
+                `;
+                this.messagesContainer.appendChild(infoElement);
+                this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+            }
+            
+            updateStatus(status) {
+                this.statusElement.textContent = status;
+            }
+            
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        }
+        
+        // Initialize app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            new BluetoothChatApp();
+        });
+    </script>
+</body>
+</html>
